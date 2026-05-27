@@ -1,8 +1,12 @@
+import json
 import os
 import sys
 import tempfile
 import urllib.error
 from pathlib import Path
+from unittest.mock import patch, MagicMock
+
+import pytest
 
 # Add parent dir to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -37,8 +41,6 @@ def test_resolve_lrc_path():
         finally:
             fl.MUSIC_DIR = orig_music_dir
 
-import pytest
-
 def test_resolve_lrc_path_rejects_absolute():
     with pytest.raises(ValueError, match="relative path"):
         fl.resolve_lrc_path("/etc/passwd")
@@ -50,9 +52,6 @@ def test_resolve_lrc_path_rejects_traversal():
 def test_resolve_lrc_path_rejects_empty():
     with pytest.raises(ValueError, match="empty"):
         fl.resolve_lrc_path("")
-
-import json
-from unittest.mock import patch, MagicMock
 
 def test_fetch_lyrics_success():
     mock_response = MagicMock()
@@ -83,6 +82,17 @@ def test_fetch_lyrics_retry_then_success():
     mock_response.__exit__ = MagicMock(return_value=False)
 
     side_effects = [urllib.error.URLError("timeout"), mock_response]
-    with patch("urllib.request.urlopen", side_effect=side_effects):
+    with patch("urllib.request.urlopen", side_effect=side_effects), \
+         patch("fetch_lyrics.time.sleep"):
         result = fl.fetch_lyrics_from_lrclib("A", "B", None, None)
         assert result == "[00:00.00]Works"
+
+def test_fetch_lyrics_exhausted_retries():
+    side_effects = [
+        urllib.error.URLError("timeout 1"),
+        urllib.error.URLError("timeout 2"),
+        urllib.error.URLError("timeout 3"),
+    ]
+    with patch("urllib.request.urlopen", side_effect=side_effects):
+        with pytest.raises(urllib.error.URLError, match="timeout 3"):
+            fl.fetch_lyrics_from_lrclib("A", "B", None, None)

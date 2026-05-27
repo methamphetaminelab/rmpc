@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Auto-fetch .lrc lyrics for rmpc via LRCLIB API."""
+from __future__ import annotations
 
 import json
 import logging
@@ -30,6 +31,8 @@ def setup_logging() -> logging.Logger:
         )
     )
     logger = logging.getLogger("fetch_lyrics")
+    for h in logger.handlers:
+        h.close()
     logger.handlers.clear()
     logger.setLevel(logging.INFO)
     logger.addHandler(handler)
@@ -75,7 +78,7 @@ def fetch_lyrics_from_lrclib(
             if e.code == 404:
                 return None
             last_error = e
-        except (urllib.error.URLError, TimeoutError) as e:
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
             last_error = e
 
         if attempt < MAX_RETRIES:
