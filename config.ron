@@ -1,10 +1,11 @@
+
 #![enable(implicit_some)]
 #![enable(unwrap_newtypes)]
 #![enable(unwrap_variant_newtypes)]
 (
     address: "127.0.0.1:6600",
     password: None,
-    theme: "custom",
+    theme:"custom",
     cache_dir: "~/.cache/rmpc",
     lyrics_dir: Some("/home/user/Music/Lyrics"),
     on_song_change: Some(["python3", "/home/user/.config/rmpc/scripts/fetch_lyrics.py"]),
@@ -20,7 +21,6 @@
     select_current_song_on_change: false,
     browser_song_sort: [Disc, Track, Artist, Title],
     directories_sort: SortFormat(group_by_type: true, reverse: false),
-
     album_art: (
         method: Auto,
         max_size_px: (width: 1200, height: 1200),
@@ -28,35 +28,33 @@
         vertical_align: Center,
         horizontal_align: Center,
     ),
-
     cava: (
-        framerate: 60,
-        autosens: true,
-        sensitivity: 100,
-        lower_cutoff_freq: 50,
-        higher_cutoff_freq: 10000,
-        input: (
-            method: Fifo,
-            source: "/tmp/mpd.fifo",
-            sample_rate: 44100,
-            channels: 2,
-            sample_bits: 16,
-        ),
-        smoothing: (
-            noise_reduction: 50,
-            monstercat: false,
-            waves: false,
-        ),
-        eq: []
+    framerate: 60, // default 60
+    autosens: true, // default true
+    sensitivity: 100, // default 100
+    lower_cutoff_freq: 50, // not passed to cava if not provided
+    higher_cutoff_freq: 10000, // not passed to cava if not provided
+    input: (
+        method: Fifo,
+        source: "/tmp/mpd.fifo",
+        sample_rate: 44100,
+        channels: 2,
+        sample_bits: 16,
     ),
-
+    smoothing: (
+        noise_reduction: 50, // default 77
+        monstercat: false, // default false
+        waves: false, // default false
+    ),
+    // this is a list of floating point numbers thats directly passed to cava
+    // they are passed in order that they are defined
+    eq: []
+    ),
     keybinds: (
-        clear: false,
-
         global: {
             ":":       CommandMode,
             "-":       VolumeDown,
-            "<C-p>":   Stop,
+            "<C-p>":       Stop,
             "+":       VolumeUp,
             "<Tab>":   NextTab,
             "<S-Tab>": PreviousTab,
@@ -83,7 +81,6 @@
             "P":       ShowDecoders,
             "R":       AddRandom,
         },
-
         navigation: {
             "k":         Up,
             "j":         Down,
@@ -97,43 +94,41 @@
             "<C-j>":     PaneDown,
             "<C-h>":     PaneLeft,
             "<C-l>":     PaneRight,
-            "<C-u>":     UpHalf,
-            "<C-Up>":    PaneUp,
-            "<C-Down>":  PaneDown,
-            "<C-Left>":  PaneLeft,
-            "<C-Right>": PaneRight,
+            "<C-u>":     UpHalf, 
+            "<C-Up>":     PaneUp,
+            "<C-Down>":     PaneDown,
+            "<C-Left>":     PaneLeft,
+            "<C-Right>":     PaneRight,
             "N":         PreviousResult,
+            "a":         Add,
+            "A":         AddAll,
+            "r":         Rename,
             "n":         NextResult,
             "g":         Top,
-            "G":         Bottom,
             "<Space>":   Select,
             "<C-Space>": InvertSelection,
+            "G":         Bottom,
             "<CR>":      Confirm,
             "i":         FocusInput,
             "J":         MoveDown,
-            "K":         MoveUp,
             "<C-d>":     DownHalf,
             "/":         EnterSearch,
             "<C-c>":     Close,
             "<Esc>":     Close,
+            "K":         MoveUp,
             "D":         Delete,
             "B":         ShowInfo,
-            "r":         Rename,
-            "<C-s>":     Save(kind: Modal(all: true)),
-            "a":         Add,
-            "A":         AddAll,
         },
-
         queue: {
+            "D":       DeleteAll,
             "<CR>":    Play,
+            "<C-s>":   Save,
             "a":       AddToPlaylist,
             "d":       Delete,
-            "D":       DeleteAll,
             "C":       JumpToCurrent,
             "s":       Shuffle,
         },
     ),
-
     search: (
         case_sensitive: false,
         mode: Contains,
@@ -147,56 +142,39 @@
             (value: "genre",       label: "Genre"),
         ],
     ),
-
     artists: (
         album_display_mode: SplitByDate,
         album_sort_by: Date,
     ),
+tabs: [
+        (
+        name: "Queue",
+        pane: Split(
+            direction: Horizontal,
+            panes: [
 
-    tabs: [
-        (
-            name: "Queue",
-            pane: Split(
-                direction: Horizontal,
+            (size:"60%", pane: Split (
+                direction: Vertical,
+                borders: "RIGHT",
                 panes: [
-                    (
-                        size: "60%",
-                        pane: Split(
-                            direction: Vertical,
-                            borders: "RIGHT",
-                            panes: [
-                                (
-                                    size: "50%",
-                                    pane: Pane(Directories),
-                                ),
-                                (
-                                    size: "50%",
-                                    pane: Pane(Queue),
-                                    borders: "TOP",
-                                ),
-                            ],
-                        ),
-                    ),
-                    (
-                        size: "40%",
-                        pane: Split(
-                            direction: Vertical,
-                            panes: [
-                                (
-                                    size: "80%",
-                                    pane: Pane(AlbumArt),
-                                ),
-                                (
-                                    size: "20%",
-                                    pane: Pane(Cava),
-                                ),
-                            ],
-                        ),
-                    ),
+                    (size: "50%",
+                    pane: Pane(Directories)),
+                    (size: "50%", pane: Pane(Queue),
+                    borders: "TOP"),
                 ],
-            ),
+            )),
+
+                (size: "40%", pane: Split(
+                    direction: Vertical,
+                    panes: [
+                        (size: "80%", pane: Pane(AlbumArt)),
+                        (size: "20%", pane: Pane(Cava)),
+                    ],
+                )),
+            ],
         ),
-        (
+        ),
+                (
             name: "Playlists",
             pane: Pane(Playlists),
         ),
@@ -214,3 +192,4 @@
         ),
     ],
 )
+
