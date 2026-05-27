@@ -63,6 +63,7 @@
             "3":       SwitchToTab("Artists"),
             "4":       SwitchToTab("Albums"),
             "5":       SwitchToTab("Search"),
+            "6":       SwitchToTab("Lyrics"),
             "q":       Quit,
             ">":       NextTrack,
             "p":       TogglePause,
@@ -158,7 +159,7 @@ tabs: [
                 borders: "RIGHT",
                 panes: [
                     (size: "50%",
-                    pane: Pane(Directories)),
+                    pane: Pane(Playlists)),
                     (size: "50%", pane: Pane(Queue),
                     borders: "TOP"),
                 ],
@@ -189,6 +190,10 @@ tabs: [
         (
             name: "Search",
             pane: Pane(Search),
+        ),
+        (
+            name: "Lyrics",
+            pane: Pane(Lyrics),
         ),
     ],
 )
