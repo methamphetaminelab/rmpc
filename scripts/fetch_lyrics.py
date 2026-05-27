@@ -34,6 +34,12 @@ def setup_logging() -> logging.Logger:
     return logger
 
 
+def resolve_lrc_path(current_song: str) -> Path:
+    """Map a relative song path to its .lrc path under Music/Lyrics."""
+    relative = Path(current_song)
+    return MUSIC_DIR / LRC_SUBDIR / relative.with_suffix(".lrc")
+
+
 # ── Main ────────────────────────────────────────────────────────────
 def main() -> int:
     logger = setup_logging()

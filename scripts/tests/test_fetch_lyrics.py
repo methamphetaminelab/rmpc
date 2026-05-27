@@ -22,3 +22,16 @@ def test_setup_logging_creates_file():
             assert "test message" in content
         finally:
             fl.LOG_FILE = orig_log_file
+
+def test_resolve_lrc_path():
+    with tempfile.TemporaryDirectory() as tmp:
+        music_dir = Path(tmp) / "Music"
+        music_dir.mkdir()
+        orig_music_dir = fl.MUSIC_DIR
+        fl.MUSIC_DIR = music_dir
+        try:
+            path = fl.resolve_lrc_path("Artist/Album/song.flac")
+            expected = music_dir / "Lyrics" / "Artist" / "Album" / "song.lrc"
+            assert path == expected
+        finally:
+            fl.MUSIC_DIR = orig_music_dir
