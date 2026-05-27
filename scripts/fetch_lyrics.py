@@ -130,10 +130,14 @@ def main() -> int:
         logger.info("Lyrics not found on LRCLIB")
         return 0
 
-    lrc_path.parent.mkdir(parents=True, exist_ok=True)
-    lrc_path.write_text(synced_lyrics, encoding="utf-8")
-    logger.info("Saved lyrics to %s", lrc_path)
-    return 0
+    try:
+        lrc_path.parent.mkdir(parents=True, exist_ok=True)
+        lrc_path.write_text(synced_lyrics, encoding="utf-8")
+        logger.info("Saved lyrics to %s", lrc_path)
+        return 0
+    except OSError as e:
+        logger.error("Failed to write lyrics to %s: %s", lrc_path, e)
+        return 1
 
 
 if __name__ == "__main__":
