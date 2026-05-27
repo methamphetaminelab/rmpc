@@ -1,5 +1,4 @@
 import json
-import os
 import sys
 import tempfile
 import urllib.error
@@ -93,6 +92,7 @@ def test_fetch_lyrics_exhausted_retries():
         urllib.error.URLError("timeout 2"),
         urllib.error.URLError("timeout 3"),
     ]
-    with patch("urllib.request.urlopen", side_effect=side_effects):
+    with patch("urllib.request.urlopen", side_effect=side_effects), \
+         patch("fetch_lyrics.time.sleep"):
         with pytest.raises(urllib.error.URLError, match="timeout 3"):
             fl.fetch_lyrics_from_lrclib("A", "B", None, None)
