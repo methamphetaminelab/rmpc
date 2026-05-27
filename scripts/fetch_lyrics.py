@@ -110,7 +110,11 @@ def main() -> int:
         except ValueError:
             logger.warning("Invalid DURATION: %s", duration_raw)
 
-    lrc_path = resolve_lrc_path(current_song)
+    try:
+        lrc_path = resolve_lrc_path(current_song)
+    except ValueError as e:
+        logger.error("Invalid current song path: %s", e)
+        return 1
     if lrc_path.exists():
         logger.info("Lyrics already exist at %s, skipping", lrc_path)
         return 0
@@ -118,8 +122,8 @@ def main() -> int:
     logger.info("Fetching lyrics for %s - %s", artist, title)
     try:
         synced_lyrics = fetch_lyrics_from_lrclib(artist, title, album, duration)
-    except Exception as e:
-        logger.error("Failed to fetch lyrics: %s", e)
+    except Exception:
+        logger.exception("Failed to fetch lyrics for %s - %s", artist, title)
         return 1
 
     if synced_lyrics is None:

@@ -108,6 +108,9 @@ def test_main_skips_when_file_exists():
         lrc_file.write_text("[00:00.00]Existing")
 
         orig_music_dir = fl.MUSIC_DIR
+        orig_log_file = fl.LOG_FILE
+        log_path = Path(tmp) / "test.log"
+        fl.LOG_FILE = log_path
         fl.MUSIC_DIR = music_dir
         try:
             os.environ["CURRENT_SONG"] = "Artist/Album/song.flac"
@@ -120,6 +123,7 @@ def test_main_skips_when_file_exists():
             assert lrc_file.read_text() == "[00:00.00]Existing"
         finally:
             fl.MUSIC_DIR = orig_music_dir
+            fl.LOG_FILE = orig_log_file
             for k in ("CURRENT_SONG", "ARTIST", "TITLE", "ALBUM", "DURATION"):
                 os.environ.pop(k, None)
 
@@ -135,6 +139,9 @@ def test_main_fetches_and_saves():
         music_dir = Path(tmp) / "Music"
         music_dir.mkdir()
         orig_music_dir = fl.MUSIC_DIR
+        orig_log_file = fl.LOG_FILE
+        log_path = Path(tmp) / "test.log"
+        fl.LOG_FILE = log_path
         fl.MUSIC_DIR = music_dir
         try:
             os.environ["CURRENT_SONG"] = "Artist/Album/song.flac"
@@ -151,5 +158,19 @@ def test_main_fetches_and_saves():
             assert "[00:12.34]Line 1" in lrc_file.read_text()
         finally:
             fl.MUSIC_DIR = orig_music_dir
+            fl.LOG_FILE = orig_log_file
             for k in ("CURRENT_SONG", "ARTIST", "TITLE", "ALBUM", "DURATION"):
                 os.environ.pop(k, None)
+
+def test_main_missing_metadata():
+    with tempfile.TemporaryDirectory() as tmp:
+        orig_log_file = fl.LOG_FILE
+        log_path = Path(tmp) / "test.log"
+        fl.LOG_FILE = log_path
+        try:
+            os.environ.pop("CURRENT_SONG", None)
+            os.environ.pop("ARTIST", None)
+            os.environ.pop("TITLE", None)
+            assert fl.main() == 0
+        finally:
+            fl.LOG_FILE = orig_log_file
