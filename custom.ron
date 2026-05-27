@@ -24,11 +24,11 @@
     borders_style: (fg: "#313244"),
     highlight_border_style: (fg: "#cba6f7"),
     symbols: (
-        song: "S",
-        dir: " ",
+        song: "󰝚 ",
+        dir: "󰉋 ",
         playlist: "󰲸 ",
         marker: "󰘍  ",
-        ellipsis: "...",
+        ellipsis: "…",
         song_style: (fg: "#89b4fa"),
         dir_style: (fg: "#fab387"),
         playlist_style: (fg: "#a6e3a1"),
@@ -130,6 +130,9 @@
                     )
                 ],
                 right: [
+                    (kind: Property(Status(Bitrate)), style: (fg: "#94e2d5")),
+                    (kind: Text(" kbps"), style: (fg: "#6c7086")),
+                    (kind: Text(" / "), style: (fg: "#313244")),
                     (kind: Property(Widget(ScanStatus)), style: (fg: "#f9e2af")),
                     (kind: Property(Widget(Volume)), style: (fg: "#fab387"))
                 ]
@@ -156,7 +159,7 @@
                             separator_style: (fg: "#313244")))
                         ),
                         style: (fg: "#6c7086")
-                    ),
+                    )
                 ]
             ),
         ],
