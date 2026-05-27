@@ -35,3 +35,17 @@ def test_resolve_lrc_path():
             assert path == expected
         finally:
             fl.MUSIC_DIR = orig_music_dir
+
+import pytest
+
+def test_resolve_lrc_path_rejects_absolute():
+    with pytest.raises(ValueError, match="relative path"):
+        fl.resolve_lrc_path("/etc/passwd")
+
+def test_resolve_lrc_path_rejects_traversal():
+    with pytest.raises(ValueError, match="Path traversal"):
+        fl.resolve_lrc_path("../../../etc/passwd")
+
+def test_resolve_lrc_path_rejects_empty():
+    with pytest.raises(ValueError, match="empty"):
+        fl.resolve_lrc_path("")

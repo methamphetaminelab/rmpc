@@ -29,6 +29,7 @@ def setup_logging() -> logging.Logger:
         )
     )
     logger = logging.getLogger("fetch_lyrics")
+    logger.handlers.clear()
     logger.setLevel(logging.INFO)
     logger.addHandler(handler)
     return logger
@@ -36,7 +37,13 @@ def setup_logging() -> logging.Logger:
 
 def resolve_lrc_path(current_song: str) -> Path:
     """Map a relative song path to its .lrc path under Music/Lyrics."""
+    if not current_song.strip():
+        raise ValueError("current_song must not be empty")
     relative = Path(current_song)
+    if relative.is_absolute():
+        raise ValueError("current_song must be a relative path")
+    if ".." in relative.parts:
+        raise ValueError("Path traversal not allowed")
     return MUSIC_DIR / LRC_SUBDIR / relative.with_suffix(".lrc")
 
 
