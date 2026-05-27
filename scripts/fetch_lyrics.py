@@ -92,7 +92,43 @@ def fetch_lyrics_from_lrclib(
 def main() -> int:
     logger = setup_logging()
     logger.info("fetch_lyrics invoked")
-    # TODO: implement
+
+    current_song = os.environ.get("CURRENT_SONG", "").strip()
+    artist = os.environ.get("ARTIST", "").strip()
+    title = os.environ.get("TITLE", "").strip()
+    album = os.environ.get("ALBUM", "").strip() or None
+    duration_raw = os.environ.get("DURATION", "").strip()
+
+    if not current_song or not artist or not title:
+        logger.info("Missing metadata, skipping")
+        return 0
+
+    duration = None
+    if duration_raw:
+        try:
+            duration = float(duration_raw)
+        except ValueError:
+            logger.warning("Invalid DURATION: %s", duration_raw)
+
+    lrc_path = resolve_lrc_path(current_song)
+    if lrc_path.exists():
+        logger.info("Lyrics already exist at %s, skipping", lrc_path)
+        return 0
+
+    logger.info("Fetching lyrics for %s - %s", artist, title)
+    try:
+        synced_lyrics = fetch_lyrics_from_lrclib(artist, title, album, duration)
+    except Exception as e:
+        logger.error("Failed to fetch lyrics: %s", e)
+        return 1
+
+    if synced_lyrics is None:
+        logger.info("Lyrics not found on LRCLIB")
+        return 0
+
+    lrc_path.parent.mkdir(parents=True, exist_ok=True)
+    lrc_path.write_text(synced_lyrics, encoding="utf-8")
+    logger.info("Saved lyrics to %s", lrc_path)
     return 0
 
 

@@ -1,4 +1,5 @@
 import json
+import os
 import sys
 import tempfile
 import urllib.error
@@ -96,3 +97,59 @@ def test_fetch_lyrics_exhausted_retries():
          patch("fetch_lyrics.time.sleep"):
         with pytest.raises(urllib.error.URLError, match="timeout 3"):
             fl.fetch_lyrics_from_lrclib("A", "B", None, None)
+
+def test_main_skips_when_file_exists():
+    with tempfile.TemporaryDirectory() as tmp:
+        music_dir = Path(tmp) / "Music"
+        music_dir.mkdir()
+        lrc_dir = music_dir / "Lyrics" / "Artist" / "Album"
+        lrc_dir.mkdir(parents=True)
+        lrc_file = lrc_dir / "song.lrc"
+        lrc_file.write_text("[00:00.00]Existing")
+
+        orig_music_dir = fl.MUSIC_DIR
+        fl.MUSIC_DIR = music_dir
+        try:
+            os.environ["CURRENT_SONG"] = "Artist/Album/song.flac"
+            os.environ["ARTIST"] = "Artist"
+            os.environ["TITLE"] = "Title"
+            os.environ["ALBUM"] = "Album"
+            os.environ["DURATION"] = "245.5"
+            assert fl.main() == 0
+            # File should remain unchanged
+            assert lrc_file.read_text() == "[00:00.00]Existing"
+        finally:
+            fl.MUSIC_DIR = orig_music_dir
+            for k in ("CURRENT_SONG", "ARTIST", "TITLE", "ALBUM", "DURATION"):
+                os.environ.pop(k, None)
+
+def test_main_fetches_and_saves():
+    mock_response = MagicMock()
+    mock_response.read.return_value = json.dumps({
+        "syncedLyrics": "[00:12.34]Line 1\n[00:15.67]Line 2"
+    }).encode()
+    mock_response.__enter__ = MagicMock(return_value=mock_response)
+    mock_response.__exit__ = MagicMock(return_value=False)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        music_dir = Path(tmp) / "Music"
+        music_dir.mkdir()
+        orig_music_dir = fl.MUSIC_DIR
+        fl.MUSIC_DIR = music_dir
+        try:
+            os.environ["CURRENT_SONG"] = "Artist/Album/song.flac"
+            os.environ["ARTIST"] = "Artist"
+            os.environ["TITLE"] = "Title"
+            os.environ["ALBUM"] = "Album"
+            os.environ["DURATION"] = "245.5"
+
+            with patch("urllib.request.urlopen", return_value=mock_response):
+                assert fl.main() == 0
+
+            lrc_file = music_dir / "Lyrics" / "Artist" / "Album" / "song.lrc"
+            assert lrc_file.exists()
+            assert "[00:12.34]Line 1" in lrc_file.read_text()
+        finally:
+            fl.MUSIC_DIR = orig_music_dir
+            for k in ("CURRENT_SONG", "ARTIST", "TITLE", "ALBUM", "DURATION"):
+                os.environ.pop(k, None)
