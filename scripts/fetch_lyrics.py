@@ -2,6 +2,7 @@
 """Auto-fetch .lrc lyrics for rmpc via LRCLIB API."""
 from __future__ import annotations
 
+import fcntl
 import json
 import logging
 import os
@@ -49,6 +50,36 @@ def resolve_lrc_path(current_song: str) -> Path:
     if ".." in relative.parts:
         raise ValueError("Path traversal not allowed")
     return MUSIC_DIR / LRC_SUBDIR / relative.with_suffix(".lrc")
+
+
+def _acquire_fetch_lock(lrc_path: Path) -> int | None:
+    """Acquire an exclusive, non-blocking file lock for the given lrc path.
+
+    Returns the file descriptor on success, or None if another process holds the lock.
+    """
+    lock_path = lrc_path.with_suffix(lrc_path.suffix + ".lock")
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(str(lock_path), os.O_CREAT | os.O_RDWR)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return fd
+    except (BlockingIOError, OSError):
+        os.close(fd)
+        return None
+
+
+def _release_fetch_lock(fd: int, lrc_path: Path) -> None:
+    """Release the lock and clean up the lock file."""
+    try:
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        os.close(fd)
+    except OSError:
+        pass
+    lock_path = lrc_path.with_suffix(lrc_path.suffix + ".lock")
+    try:
+        lock_path.unlink(missing_ok=True)
+    except OSError:
+        pass
 
 
 def _try_fetch_lrclib(
@@ -144,27 +175,39 @@ def main() -> int:
         logger.info("Lyrics already exist at %s, skipping", lrc_path)
         return 0
 
-    logger.info("Fetching lyrics for %s - %s", artist, title)
-    try:
-        synced_lyrics = fetch_lyrics_from_lrclib(artist, title, album, duration)
-    except Exception:
-        logger.exception("Failed to fetch lyrics for %s - %s", artist, title)
-        return 1
-
-    if synced_lyrics is None:
-        logger.info("Lyrics not found on LRCLIB")
+    lock_fd = _acquire_fetch_lock(lrc_path)
+    if lock_fd is None:
+        logger.info("Another process is fetching lyrics for %s, skipping", lrc_path)
         return 0
 
     try:
-        lrc_path.parent.mkdir(parents=True, exist_ok=True)
-        lrc_path.write_text(synced_lyrics, encoding="utf-8")
-        logger.info("Saved lyrics to %s", lrc_path)
-        # Print path so callers can notify rmpc about the new file
-        print(lrc_path)
-        return 0
-    except OSError as e:
-        logger.error("Failed to write lyrics to %s: %s", lrc_path, e)
-        return 1
+        # Double-check inside the lock in case another process just finished
+        if lrc_path.exists():
+            return 0
+
+        logger.info("Fetching lyrics for %s - %s", artist, title)
+        try:
+            synced_lyrics = fetch_lyrics_from_lrclib(artist, title, album, duration)
+        except Exception:
+            logger.exception("Failed to fetch lyrics for %s - %s", artist, title)
+            return 1
+
+        if synced_lyrics is None:
+            logger.info("Lyrics not found on LRCLIB")
+            return 0
+
+        try:
+            lrc_path.parent.mkdir(parents=True, exist_ok=True)
+            lrc_path.write_text(synced_lyrics, encoding="utf-8")
+            logger.info("Saved lyrics to %s", lrc_path)
+            # Print path so callers can notify rmpc about the new file
+            print(lrc_path)
+            return 0
+        except OSError as e:
+            logger.error("Failed to write lyrics to %s: %s", lrc_path, e)
+            return 1
+    finally:
+        _release_fetch_lock(lock_fd, lrc_path)
 
 
 if __name__ == "__main__":
