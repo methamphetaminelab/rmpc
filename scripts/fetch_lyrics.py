@@ -159,6 +159,8 @@ def main() -> int:
         lrc_path.parent.mkdir(parents=True, exist_ok=True)
         lrc_path.write_text(synced_lyrics, encoding="utf-8")
         logger.info("Saved lyrics to %s", lrc_path)
+        # Print path so callers can notify rmpc about the new file
+        print(lrc_path)
         return 0
     except OSError as e:
         logger.error("Failed to write lyrics to %s: %s", lrc_path, e)

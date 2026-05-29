@@ -8,7 +8,7 @@
     theme:"custom",
     cache_dir: "~/.cache/rmpc",
     lyrics_dir: Some("/home/user/Music/Lyrics"),
-    on_song_change: Some(["python3", "/home/user/.config/rmpc/scripts/fetch_lyrics.py"]),
+    on_song_change: Some(["python3", "/home/user/.config/rmpc/scripts/notify_lyrics.py"]),
     volume_step: 5,
     max_fps: 60,
     scrolloff: 0,
