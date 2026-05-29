@@ -71,20 +71,27 @@
             prop: (kind: Property(Artist),
                 default: (kind: Text("Unknown"))
             ),
-            width: "33%",
+            width: "25%",
         ),
         (
             prop: (kind: Property(Title),
                 default: (kind: Text("Unknown"))
             ),
-            width: "33%",
+            width: "30%",
+            alignment: Center,
+        ),
+        (
+            prop: (kind: Property(Album),
+                default: (kind: Text("Unknown Album"))
+            ),
+            width: "25%",
             alignment: Center,
         ),
         (
             prop: (kind: Property(Duration),
                 default: (kind: Text("-"))
             ),
-            width: "33%",
+            width: "20%",
             alignment: Right,
         ),
     ],

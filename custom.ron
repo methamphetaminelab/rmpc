@@ -69,7 +69,7 @@
                 kind: Property(Artist),
                 default: (kind: Text("Unknown"), style: (fg: "#6c7086"))
             ),
-            width: "33%",
+            width: "25%",
             style: (fg: "#89b4fa"),
         ),
         (
@@ -77,16 +77,25 @@
                 kind: Property(Title),
                 default: (kind: Text("Unknown"), style: (fg: "#6c7086"))
             ),
-            width: "33%",
+            width: "30%",
             alignment: Center,
             style: (fg: "#cdd6f4", modifiers: "Bold"),
+        ),
+        (
+            prop: (
+                kind: Property(Album),
+                default: (kind: Text("Unknown Album"), style: (fg: "#6c7086"))
+            ),
+            width: "25%",
+            alignment: Center,
+            style: (fg: "#cba6f7"),
         ),
         (
             prop: (
                 kind: Property(Duration),
                 default: (kind: Text("-"))
             ),
-            width: "33%",
+            width: "20%",
             alignment: Right,
             style: (fg: "#6c7086"),
         ),
