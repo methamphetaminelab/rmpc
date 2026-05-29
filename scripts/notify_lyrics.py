@@ -42,6 +42,23 @@ def main():
         _rmpc_remote("indexlrc", "--path", lrc_path)
         # Show a message in rmpc's status bar
         _rmpc_remote("status", f"Lyrics downloaded: {artist} - {title}")
+        return 0
+
+    # No stdout → check log to distinguish "not found" from "already exists" / "missing metadata"
+    log_file = os.path.expanduser("~/.local/share/rmpc/fetch_lyrics.log")
+    try:
+        with open(log_file, "r") as f:
+            last_lines = "".join(f.readlines()[-5:])
+    except FileNotFoundError:
+        last_lines = ""
+
+    if "Lyrics not found on LRCLIB" in last_lines:
+        _rmpc_remote(
+            "status",
+            "--level",
+            "warn",
+            f"Lyrics not found: {artist} - {title}",
+        )
 
     return 0
 
