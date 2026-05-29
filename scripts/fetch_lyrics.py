@@ -51,10 +51,10 @@ def resolve_lrc_path(current_song: str) -> Path:
     return MUSIC_DIR / LRC_SUBDIR / relative.with_suffix(".lrc")
 
 
-def fetch_lyrics_from_lrclib(
+def _try_fetch_lrclib(
     artist: str, title: str, album: str | None, duration: float | None
 ) -> str | None:
-    """Query LRCLIB for synced lyrics. Returns None if not found or on error."""
+    """Direct LRCLIB API query."""
     params = {
         "artist_name": artist,
         "track_name": title,
@@ -67,16 +67,41 @@ def fetch_lyrics_from_lrclib(
     query = urllib.parse.urlencode(params)
     url = f"{LRCLIB_API}?{query}"
 
+    req = urllib.request.Request(url, headers={"User-Agent": "rmpc-auto-lyrics/1.0"})
+    with urllib.request.urlopen(req, timeout=TIMEOUT_SECONDS) as response:
+        data = json.loads(response.read().decode())
+        return data.get("syncedLyrics") or None
+
+
+def _search_lrclib(artist: str, title: str) -> str | None:
+    """Fallback search via LRCLIB search API."""
+    query = urllib.parse.quote(f"{artist} {title}")
+    url = f"https://lrclib.net/api/search?q={query}"
+
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "rmpc-auto-lyrics/1.0"})
+        with urllib.request.urlopen(req, timeout=TIMEOUT_SECONDS) as response:
+            data = json.loads(response.read().decode())
+            title_lower = title.lower()
+            for track in data:
+                if track.get("trackName", "").lower() == title_lower:
+                    return track.get("syncedLyrics") or None
+    except Exception:
+        pass
+    return None
+
+
+def fetch_lyrics_from_lrclib(
+    artist: str, title: str, album: str | None, duration: float | None
+) -> str | None:
+    """Query LRCLIB for synced lyrics. Returns None if not found or on error."""
     last_error = None
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": "rmpc-auto-lyrics/1.0"})
-            with urllib.request.urlopen(req, timeout=TIMEOUT_SECONDS) as response:
-                data = json.loads(response.read().decode())
-                return data.get("syncedLyrics") or None
+            return _try_fetch_lrclib(artist, title, album, duration)
         except urllib.error.HTTPError as e:
             if e.code == 404:
-                return None
+                return _search_lrclib(artist, title)
             last_error = e
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
             last_error = e

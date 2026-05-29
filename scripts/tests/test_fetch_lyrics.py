@@ -73,6 +73,54 @@ def test_fetch_lyrics_not_found():
         result = fl.fetch_lyrics_from_lrclib("Artist", "Title", None, None)
         assert result is None
 
+def test_fetch_lyrics_fallback_search():
+    """Test fallback to search API when direct get returns 404."""
+    def side_effect(req, **kwargs):
+        url = req.get_full_url()
+        if "/api/get?" in url:
+            raise urllib.error.HTTPError(url, 404, "Not Found", {}, None)
+        elif "/api/search?" in url:
+            mock_resp = MagicMock()
+            mock_resp.read.return_value = json.dumps([
+                {
+                    "trackName": "Glubina",
+                    "syncedLyrics": "[00:10.91] Оу\n[00:12.86] На-на..."
+                }
+            ]).encode()
+            mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+            mock_resp.__exit__ = MagicMock(return_value=False)
+            return mock_resp
+        else:
+            raise RuntimeError(f"Unexpected URL: {url}")
+
+    with patch("urllib.request.urlopen", side_effect=side_effect):
+        result = fl.fetch_lyrics_from_lrclib("Depo Boulevard", "Glubina", None, None)
+        assert result == "[00:10.91] Оу\n[00:12.86] На-на..."
+
+def test_fetch_lyrics_fallback_search_no_match():
+    """Test fallback search returns None when no matching track found."""
+    def side_effect(req, **kwargs):
+        url = req.get_full_url()
+        if "/api/get?" in url:
+            raise urllib.error.HTTPError(url, 404, "Not Found", {}, None)
+        elif "/api/search?" in url:
+            mock_resp = MagicMock()
+            mock_resp.read.return_value = json.dumps([
+                {
+                    "trackName": "Different Track",
+                    "syncedLyrics": "[00:00.00]Lyrics"
+                }
+            ]).encode()
+            mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+            mock_resp.__exit__ = MagicMock(return_value=False)
+            return mock_resp
+        else:
+            raise RuntimeError(f"Unexpected URL: {url}")
+
+    with patch("urllib.request.urlopen", side_effect=side_effect):
+        result = fl.fetch_lyrics_from_lrclib("Depo Boulevard", "Glubina", None, None)
+        assert result is None
+
 def test_fetch_lyrics_retry_then_success():
     mock_response = MagicMock()
     mock_response.read.return_value = json.dumps({
