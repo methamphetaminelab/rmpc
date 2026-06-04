@@ -6,6 +6,7 @@ import fcntl
 import json
 import logging
 import os
+import re
 import time
 import urllib.error
 import urllib.parse
@@ -82,6 +83,40 @@ def _release_fetch_lock(fd: int, lrc_path: Path) -> None:
         pass
 
 
+def _normalize(s: str) -> str:
+    """Collapse whitespace and strip."""
+    return re.sub(r"\s+", " ", s.strip())
+
+
+def _parse_duration(raw: str) -> float | None:
+    """Parse duration: float seconds or MM:SS / HH:MM:SS."""
+    raw = raw.strip()
+    if not raw:
+        return None
+    try:
+        return float(raw)
+    except ValueError:
+        pass
+    parts = raw.split(":")
+    try:
+        nums = [float(p) for p in parts]
+    except ValueError:
+        return None
+    if len(nums) == 2:  # MM:SS
+        return nums[0] * 60 + nums[1]
+    if len(nums) == 3:  # HH:MM:SS
+        return nums[0] * 3600 + nums[1] * 60 + nums[2]
+    return None
+
+
+def _swap_artist_name(artist: str) -> str | None:
+    """If artist looks like 'First Last', try 'Last First'."""
+    parts = artist.split()
+    if len(parts) == 2:
+        return f"{parts[1]} {parts[0]}"
+    return None
+
+
 def _try_fetch_lrclib(
     artist: str, title: str, album: str | None, duration: float | None
 ) -> str | None:
@@ -113,10 +148,41 @@ def _search_lrclib(artist: str, title: str) -> str | None:
         req = urllib.request.Request(url, headers={"User-Agent": "rmpc-auto-lyrics/1.0"})
         with urllib.request.urlopen(req, timeout=TIMEOUT_SECONDS) as response:
             data = json.loads(response.read().decode())
+            artist_lower = artist.lower()
             title_lower = title.lower()
+            best_match = None
+            best_score = 0
             for track in data:
-                if track.get("trackName", "").lower() == title_lower:
+                track_artist = track.get("artistName", "").lower()
+                track_title = track.get("trackName", "").lower()
+
+                # Exact title match → immediate win
+                if track_title == title_lower:
                     return track.get("syncedLyrics") or None
+
+                # Fuzzy title match (one contains the other)
+                title_score = 0
+                if title_lower in track_title or track_title in title_lower:
+                    title_score = 1
+
+                # Artist similarity
+                artist_score = 0
+                if artist_lower == track_artist:
+                    artist_score = 2
+                elif artist_lower in track_artist or track_artist in artist_lower:
+                    artist_score = 1
+                elif _swap_artist_name(artist_lower) == track_artist:
+                    artist_score = 2
+                elif _swap_artist_name(artist_lower) in track_artist:
+                    artist_score = 1
+
+                score = title_score + artist_score
+                if score > best_score:
+                    best_score = score
+                    best_match = track
+
+            if best_match and best_score >= 2:
+                return best_match.get("syncedLyrics") or None
     except Exception:
         pass
     return None
@@ -126,12 +192,27 @@ def fetch_lyrics_from_lrclib(
     artist: str, title: str, album: str | None, duration: float | None
 ) -> str | None:
     """Query LRCLIB for synced lyrics. Returns None if not found or on error."""
+    artist = _normalize(artist)
+    title = _normalize(title)
+    if album:
+        album = _normalize(album)
+
     last_error = None
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             return _try_fetch_lrclib(artist, title, album, duration)
         except urllib.error.HTTPError as e:
             if e.code == 404:
+                # Try swapped artist name (e.g. "Depo Boulevard" → "Boulevard Depo")
+                swapped = _swap_artist_name(artist)
+                if swapped:
+                    try:
+                        return _try_fetch_lrclib(swapped, title, album, duration)
+                    except urllib.error.HTTPError as e2:
+                        if e2.code != 404:
+                            last_error = e2
+                    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e2:
+                        last_error = e2
                 return _search_lrclib(artist, title)
             last_error = e
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
@@ -159,12 +240,9 @@ def main() -> int:
         logger.info("Missing metadata, skipping")
         return 0
 
-    duration = None
-    if duration_raw:
-        try:
-            duration = float(duration_raw)
-        except ValueError:
-            logger.warning("Invalid DURATION: %s", duration_raw)
+    duration = _parse_duration(duration_raw) if duration_raw else None
+    if duration_raw and duration is None:
+        logger.warning("Invalid DURATION: %s", duration_raw)
 
     try:
         lrc_path = resolve_lrc_path(current_song)

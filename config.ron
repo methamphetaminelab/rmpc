@@ -193,7 +193,7 @@
                             (
                                     size: "12%",
                                     borders: "LEFT | RIGHT | BOTTOM",
-                                    border_symbols: Rounded,
+                                    border_symbols: Plain,
                                     pane: Pane(Cava),
                                 ),
                             ],
