@@ -45,12 +45,21 @@ def resolve_lrc_path(current_song: str) -> Path:
     """Map a relative song path to its .lrc path under Music/Lyrics."""
     if not current_song.strip():
         raise ValueError("current_song must not be empty")
-    relative = Path(current_song)
+    # адреса Mopidy (youtube:video:ID) -> youtube/video/ID: двоеточие запрещено на NTFS
+    relative = Path(current_song.replace(":", "/"))
     if relative.is_absolute():
         raise ValueError("current_song must be a relative path")
     if ".." in relative.parts:
         raise ValueError("Path traversal not allowed")
     return MUSIC_DIR / LRC_SUBDIR / relative.with_suffix(".lrc")
+
+
+def with_tags(lyrics: str, artist: str, album: str | None, title: str) -> str:
+    """Добавить [ar:]/[al:]/[ti:]: по ним rmpc ищет текст (у онлайн-треков нет пути в Music)."""
+    if "[ti:" in lyrics:
+        return lyrics
+    tags = [f"[ar:{artist}]"] + ([f"[al:{album}]"] if album else []) + [f"[ti:{title}]"]
+    return "\n".join(tags) + "\n" + lyrics
 
 
 def _acquire_fetch_lock(lrc_path: Path) -> int | None:
@@ -276,7 +285,7 @@ def main() -> int:
 
         try:
             lrc_path.parent.mkdir(parents=True, exist_ok=True)
-            lrc_path.write_text(synced_lyrics, encoding="utf-8")
+            lrc_path.write_text(with_tags(synced_lyrics, artist, album, title), encoding="utf-8")
             logger.info("Saved lyrics to %s", lrc_path)
             # Print path so callers can notify rmpc about the new file
             print(lrc_path)

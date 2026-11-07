@@ -327,3 +327,17 @@ def test_main_parses_mmss_duration():
             fl.LOG_FILE = orig_log_file
             for k in ("CURRENT_SONG", "ARTIST", "TITLE", "ALBUM", "DURATION"):
                 os.environ.pop(k, None)
+
+def test_resolve_lrc_path_stream_uri_has_no_colons():
+    # Mopidy отдаёт адреса вида youtube:video:ID; ':' запрещён на NTFS
+    path = fl.resolve_lrc_path("youtube:video:yIDJrW43fKE")
+    assert path == fl.MUSIC_DIR / "Lyrics" / "youtube" / "video" / "yIDJrW43fKE.lrc"
+
+def test_with_tags_adds_metadata_for_rmpc_index():
+    # rmpc находит текст по [ar:]/[ti:]/[al:] внутри файла, не по имени
+    text = fl.with_tags("[00:01.00]x", "rizza", "limbo", "greater than one")
+    assert text.splitlines()[:3] == ["[ar:rizza]", "[al:limbo]", "[ti:greater than one]"]
+    assert text.endswith("[00:01.00]x")
+
+def test_with_tags_keeps_existing_tags():
+    assert fl.with_tags("[ti:t]\n[00:01.00]x", "a", None, "t") == "[ti:t]\n[00:01.00]x"
