@@ -146,7 +146,7 @@
     album_art: (
         method: Auto,
         max_size_px: (width: 1200, height: 1200),
-        disabled_protocols: ["http://", "https://"],
+        disabled_protocols: ["https://"], // http:// разрешён: онлайн-треки mpd-online — http://127.0.0.1:6611/...
         vertical_align: Top,
         horizontal_align: Center,
     ),
