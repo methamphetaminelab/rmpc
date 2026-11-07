@@ -341,3 +341,8 @@ def test_with_tags_adds_metadata_for_rmpc_index():
 
 def test_with_tags_keeps_existing_tags():
     assert fl.with_tags("[ti:t]\n[00:01.00]x", "a", None, "t") == "[ti:t]\n[00:01.00]x"
+
+def test_resolve_lrc_path_online_url():
+    # mpd-online: треки в очереди MPD — ссылки на локальный резолвер
+    path = fl.resolve_lrc_path("http://127.0.0.1:6611/dz/349125841")
+    assert path == fl.MUSIC_DIR / "Lyrics" / "online" / "dz" / "349125841.lrc"

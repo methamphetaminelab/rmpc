@@ -45,7 +45,9 @@ def resolve_lrc_path(current_song: str) -> Path:
     """Map a relative song path to its .lrc path under Music/Lyrics."""
     if not current_song.strip():
         raise ValueError("current_song must not be empty")
-    # адреса Mopidy (youtube:video:ID) -> youtube/video/ID: двоеточие запрещено на NTFS
+    if "://" in current_song:  # онлайн-трек mpd-online: http://127.0.0.1:6611/dz/ID -> online/dz/ID
+        current_song = "online" + urllib.parse.urlparse(current_song).path
+    # адреса вида youtube:video:ID -> youtube/video/ID: двоеточие запрещено на NTFS
     relative = Path(current_song.replace(":", "/"))
     if relative.is_absolute():
         raise ValueError("current_song must be a relative path")

@@ -3,7 +3,7 @@
 #![enable(unwrap_newtypes)]
 #![enable(unwrap_variant_newtypes)]
 (
-    address: "127.0.0.1:6600",
+    address: "127.0.0.1:6610", // mpd-online (прокси к MPD 6600 + онлайн-поиск); напрямую: 6600
     password: None,
     theme:"custom",
     cache_dir: "~/.cache/rmpc",
@@ -133,6 +133,10 @@
         (value: "title",       label: "Title"),
         (value: "filename",    label: "Filename"),
         (value: "genre",       label: "Genre"),
+        (value: "ytm_any",     label: "󰗃 Online: Any"),
+        (value: "ytm_artist",  label: "󰗃 Online: Artist"),
+        (value: "ytm_album",   label: "󰗃 Online: Album"),
+        (value: "ytm_title",   label: "󰗃 Online: Title"),
         ],
     ),
     artists: (
