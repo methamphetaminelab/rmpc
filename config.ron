@@ -74,6 +74,7 @@
             "O":       ShowOutputs,
             "P":       ShowDecoders,
             "R":       AddRandom,
+            "L":       ExternalCommand(command: ["python3", "/home/user/.config/rmpc/scripts/like.py"], description: "Like / unlike current song (playlist Liked)"),
         },
         navigation: {
             "k":         Up,
